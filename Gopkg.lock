@@ -37,7 +37,7 @@
     ".",
     "api"
   ]
-  revision = "84c8996cae687496231a3a89efef605bfd163c71"
+  revision = "8d5c57eac99ecb356815dc016392fc342d5d72ef"
 
 [[projects]]
   name = "code.cloudfoundry.org/lager"
@@ -110,8 +110,8 @@
     "ptypes/duration",
     "ptypes/timestamp"
   ]
-  revision = "925541529c1fa6821df4e44ce2723319eb2be768"
-  version = "v1.0.0"
+  revision = "aa810b61a9c79d51363740d207bb46cf8e620ed5"
+  version = "v1.2.0"
 
 [[projects]]
   name = "github.com/hashicorp/consul"

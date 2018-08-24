@@ -208,10 +208,12 @@ var _ = Describe("Syncing", func() {
 
 				appGuid := GetAppGuid(appName)
 				routeGuid := GetRouteGuid(appName)
+				routeWeight := int32(2)
 
 				routeMapping := &api.RouteMapping{
 					RouteGuid:       routeGuid,
 					CapiProcessGuid: appGuid,
+					RouteWeight: routeWeight,
 				}
 				_, err := copilotClient.UnmapRoute(context.Background(), &api.UnmapRouteRequest{
 					RouteMapping: routeMapping,
