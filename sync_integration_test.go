@@ -208,13 +208,21 @@ var _ = Describe("Syncing", func() {
 
 				appGuid := GetAppGuid(appName)
 				routeGuid := GetRouteGuid(appName)
-				routeWeight := int32(2)
+				routeWeight := int32(55)
 
 				routeMapping := &api.RouteMapping{
 					RouteGuid:       routeGuid,
 					CapiProcessGuid: appGuid,
 					RouteWeight: routeWeight,
 				}
+
+				// delete original route mapping
+				Expect(cf.Cf("unmap-route", appName, routeGuid).Wait(Timeout)).To(Exit(0))
+
+				// recreate route mapping with custom route weight
+				rmArgs := fmt.Sprintf("-d { \"relationships\": {\"app\": {\"guid\": \"%s\"}, \"route\": {\"guid\": \"%s\"}}, weight: \"%d\"}", appGuid, routeGuid, routeWeight)
+				Expect(cf.Cf("curl", "/v2/route_mappings", "-X PUT", rmArgs).Wait(Timeout)).To(Exit(0))
+
 				_, err := copilotClient.UnmapRoute(context.Background(), &api.UnmapRouteRequest{
 					RouteMapping: routeMapping,
 				})
