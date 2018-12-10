@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"os/exec"
 	"strings"
+	"time"
 
 	"encoding/json"
 
@@ -138,6 +140,43 @@ var _ = Describe("Syncing", func() {
 					return err
 				}, Timeout).Should(Equal(models.ErrResourceNotFound))
 			})
+		})
+
+		Describe("When the clock is stopped", func() {
+			BeforeEach(func() {
+				command := exec.Command(testConfig.BoshBinary,
+					"-d",
+					testConfig.BoshDeploymentName,
+					"ssh",
+					testConfig.SchedulerInstance,
+					"-c",
+					"sudo /var/vcap/bosh/bin/monit stop cloud_controller_clock",
+				)
+				var err error
+				session, err = Start(command, GinkgoWriter, GinkgoWriter)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(session.Wait(60 * time.Second)).To(Exit(0))
+
+				Eventually(func() []byte {
+
+					command = exec.Command(testConfig.BoshBinary,
+						"-d",
+						testConfig.BoshDeploymentName,
+						"ssh",
+						testConfig.SchedulerInstance,
+						"-c",
+						"sudo /var/vcap/bosh/bin/monit summary",
+					)
+					session, err = Start(command, GinkgoWriter, GinkgoWriter)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(session.Wait(10 * time.Second)).To(Exit(0))
+					return session.Out.Contents()
+				}).Should(ContainSubstring("Process 'cloud_controller_clock'    not monitored"))
+			})
+
+			FIt("cc still attempts to update diego's state", func() {
+				println("hi")
+			}).
 		})
 	})
 

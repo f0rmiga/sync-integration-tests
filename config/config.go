@@ -21,6 +21,7 @@ type Config struct {
 	CopilotClientKey   string `json:"copilot_client_key"`
 	BoshBinary         string `json:"bosh_binary"`
 	APIInstance        string `json:"bosh_api_instance"`
+	SchedulerInstance  string `json:"bosh_scheduler_instance"`
 	BoshDeploymentName string `json:"bosh_deployment_name"`
 	BoshCACert         string `json:"bosh_ca_cert"`
 	BoshClient         string `json:"bosh_client"`
@@ -35,6 +36,7 @@ func NewConfig(path string) (Config, error) {
 	config := Config{
 		BoshBinary:         "bosh",
 		APIInstance:        "api",
+		SchedulerInstance:  "scheduler",
 		BoshDeploymentName: "cf",
 	}
 
