@@ -140,12 +140,12 @@ var _ = Describe("Syncing", func() {
 					return err
 				}, Timeout).Should(Equal(models.ErrResourceNotFound))
 			})
-			
+
 			It("by default, cc attempts to update diego's state", func() {
 				var doraDesiredLRP models.DesiredLRP
 
 				appName := generator.PrefixedRandomName("SITS", "APP")
-				
+
 				Expect(cf.Cf("push", appName, "-d", testConfig.GetAppsDomain(), "-s", "cflinuxfs3", "-p", "fixtures/dora", "-b", "ruby_buildpack").Wait(Timeout)).To(Exit(0))
 				Expect(cf.Cf("start", appName).Wait(PushTimeout)).To(Exit(0))
 				Eventually(func() string {
@@ -158,7 +158,7 @@ var _ = Describe("Syncing", func() {
 
 				guid := cf.Cf("app", appName, "--guid").Wait(Timeout).Out.Contents()
 				appGuid := strings.TrimSpace(string(guid))
-				
+
 				for _, lrp := range desiredLRPs {
 					if strings.Contains(lrp.ProcessGuid, appGuid) {
 						doraDesiredLRP = *lrp
@@ -166,7 +166,7 @@ var _ = Describe("Syncing", func() {
 					}
 				}
 				Expect(doraDesiredLRP).NotTo(BeNil())
-				
+
 				Expect(cf.Cf("push", appName, "-d", testConfig.GetAppsDomain(), "-s", "cflinuxfs3", "-p", "fixtures/staticfile", "-b", "staticfile_buildpack").Wait(Timeout)).To(Exit(0))
 				Expect(cf.Cf("start", appName).Wait(PushTimeout)).To(Exit(0))
 				Eventually(func() string {
@@ -179,13 +179,13 @@ var _ = Describe("Syncing", func() {
 					Expect(err).NotTo(HaveOccurred())
 					return len(desiredLRPs)
 				}, Timeout).Should(Equal(1))
-				
+
 			})
 		})
 
 		Describe("When the clock is stopped", func() {
 			var err error
-			
+
 			BeforeEach(func() {
 				command := exec.Command(testConfig.BoshBinary,
 					"-d",
@@ -213,9 +213,9 @@ var _ = Describe("Syncing", func() {
 					Expect(err).NotTo(HaveOccurred())
 					Expect(session.Wait(10 * time.Second)).To(Exit(0))
 					return session.Out.Contents()
-				}, 20 * time.Second).Should(ContainSubstring("Process 'cloud_controller_clock'    not monitored"))
+				}, 20*time.Second).Should(ContainSubstring("Process 'cloud_controller_clock'    not monitored"))
 			})
-			
+
 			AfterEach(func() {
 				command := exec.Command(testConfig.BoshBinary,
 					"-d",
@@ -242,88 +242,47 @@ var _ = Describe("Syncing", func() {
 					Expect(err).NotTo(HaveOccurred())
 					Expect(session.Wait(10 * time.Second)).To(Exit(0))
 					return string(session.Out.Contents())
-				}, 20 * time.Second).Should(ContainSubstring("Process 'cloud_controller_clock'    running"))
+				}, 20*time.Second).Should(ContainSubstring("Process 'cloud_controller_clock'    running"))
 			})
 
 			//FIt this
 			FIt("cc still attempts to update diego's state", func() {
-				var doraDesiredLRP, doraDesiredLRP2, staticDesiredLRP models.DesiredLRP
+				//var doraDesiredLRP, doraDesiredLRP2, staticDesiredLRP models.DesiredLRP
 
 				appName := generator.PrefixedRandomName("SITS", "APP")
-				
-				Expect(cf.Cf("push", appName, "-d", testConfig.GetAppsDomain(), "-s", "cflinuxfs3", "-p", "fixtures/dora", "-b", "ruby_buildpack").Wait(Timeout)).To(Exit(0))
+
+				Expect(cf.Cf("push",
+					appName,
+					"-d", testConfig.GetAppsDomain(),
+					"-s", "cflinuxfs3",
+					"-p", "fixtures/dora",
+					"-b", "ruby_buildpack",
+				).Wait(Timeout)).To(Exit(0))
 				Expect(cf.Cf("start", appName).Wait(PushTimeout)).To(Exit(0))
 				Eventually(func() string {
 					body, _ := Curl(testConfig.AppsDomain, appName)
 					return body
 				}, Timeout).Should(ContainSubstring("Hi, I'm Dora!"))
 
-				desiredLRPs, err := bbsClient.DesiredLRPs(logger, models.DesiredLRPFilter{})
-				Expect(err).NotTo(HaveOccurred())
-
-				guid := cf.Cf("app", appName, "--guid").Wait(Timeout).Out.Contents()
-				appGuid := strings.TrimSpace(string(guid))
-				
-				for _, lrp := range desiredLRPs {
-					if strings.Contains(lrp.ProcessGuid, appGuid) {
-						doraDesiredLRP = *lrp
-						break
-					}
-				}
-				Expect(doraDesiredLRP).NotTo(BeNil())
-				
-				Expect(cf.Cf("push", appName, "-d", testConfig.GetAppsDomain(), "-s", "cflinuxfs3", "-p", "fixtures/staticfile", "-b", "staticfile_buildpack").Wait(Timeout)).To(Exit(0))
+				Expect(cf.Cf("push",
+					appName,
+					"-d", testConfig.GetAppsDomain(),
+					"-s", "cflinuxfs3",
+					"-p", "fixtures/staticfile",
+					"-b", "staticfile_buildpack",
+				).Wait(Timeout)).To(Exit(0))
 				Expect(cf.Cf("start", appName).Wait(PushTimeout)).To(Exit(0))
-				Eventually(func() string {
+
+				counter := 0
+				Eventually(func() int {
 					body, _ := Curl(testConfig.AppsDomain, appName)
-					return body
-				}, Timeout).Should(ContainSubstring("Hello from a staticfile"))
-
-				desiredLRPs, err = bbsClient.DesiredLRPs(logger, models.DesiredLRPFilter{})
-				Expect(err).NotTo(HaveOccurred())
-				
-				guid = cf.Cf("app", appName, "--guid").Wait(Timeout).Out.Contents()
-				appStaticGuid := strings.TrimSpace(string(guid))
-
-				count := 0
-				for _, lrp := range desiredLRPs {
-					if strings.Contains(lrp.ProcessGuid, appGuid) {
-						doraDesiredLRP2 = *lrp
-						count += 1
-					} else if strings.Contains(lrp.ProcessGuid, appStaticGuid) {
-						staticDesiredLRP = *lrp
-						count += 1
+					if strings.Contains(body, "Hello from a staticfile") {
+						counter++
+					} else {
+						counter = 0
 					}
-						if count == 2 {
-							break
-						}
-				}
-				if count != 2 { 
-					Expect(doraDesiredLRP2).NotTo(BeNil())
-					Expect(staticDesiredLRP).NotTo(BeNil())
-				}
-				
-				// There's no clock, so nothing to end the dora LRP
-				Eventually(func() int {
-					desiredLRPs, err = bbsClient.DesiredLRPs(logger, models.DesiredLRPFilter{})
-					Expect(err).NotTo(HaveOccurred())
-					return len(desiredLRPs)
-				}, Timeout).Should(Equal(2))
-				time.Sleep(10 * time.Second)
-
-				fmt.Printf("doraDesiredLRP.ProcessGuid:  %s\ndoraDesiredLRP2.ProcessGuid: %s\n",
-					doraDesiredLRP.ProcessGuid, doraDesiredLRP2.ProcessGuid)
-
-				err = bbsClient.RemoveDesiredLRP(logger, doraDesiredLRP2.ProcessGuid)
-				Expect(err).NotTo(HaveOccurred())
-
-				// Now there should be only 1
-				Eventually(func() int {
-					desiredLRPs, err = bbsClient.DesiredLRPs(logger, models.DesiredLRPFilter{})
-					Expect(err).NotTo(HaveOccurred())
-					return len(desiredLRPs)
-				}, Timeout).Should(Equal(1))
-				
+					return counter
+				}).Should(Equal(10))
 			})
 		})
 	})
